@@ -7,19 +7,30 @@ import '../../Style.css'
 export default class Canvas extends Component {
   constructor(props) {
     super(props);
-    this.state = { color: 'black', thickness: 3 };
+    this.state = {
+      color: 'black',
+      thickness: 3,
+      pathArray: []
+    };
   }
 
   componentDidMount() {
     const socket = io.connect('http://localhost:3000');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+
     canvas.height = window.innerHeight * 0.8;
     canvas.width = canvas.height * 1.5;
+
     const fromTop = canvas.getBoundingClientRect().top;
     const fromLeft = canvas.getBoundingClientRect().left;
     let painting = false;
+
+    let imageData;
     function startPosition(e) {
+      // save previous state of canvas
+      imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
       painting = true;
       draw(e);
 
@@ -28,7 +39,12 @@ export default class Canvas extends Component {
 
       socket.emit('down', { down: true, x, y });
     }
+
+    const points = [];
+    const path = [];
     function finishedPosition() {
+      path.push(points);
+      console.log(path)
       painting = false;
       ctx.beginPath();
       socket.emit('down', { down: false });
@@ -47,17 +63,23 @@ export default class Canvas extends Component {
       const x = (e.clientX - fromLeft) / canvas.width;
       const y = (e.clientY - fromTop) / canvas.height;
 
+      points.push({ x, y, color: this.state.color, thickness: this.state.thickness })
+
       socket.emit('mouse', { x, y, color: this.state.color, thickness: this.state.thickness });
     };
+
     canvas.addEventListener('mousedown', startPosition);
     canvas.addEventListener('mouseup', finishedPosition);
     canvas.addEventListener('mousemove', draw);
+
     let down = false;
+
     socket.on('down', (data) => {
       down = data.down;
       if (!data.down) ctx.beginPath();
       else down2(data);
     });
+
     socket.on('mouseback', down2);
     function down2(data) {
       if (!down) return;
@@ -82,6 +104,13 @@ export default class Canvas extends Component {
       socket.emit('clear');
     };
 
+    const undoButton = document.getElementById('undo');
+    undoButton.onclick = () => {
+      undo();
+    }
+    function undo() {
+      ctx.putImageData(imageData, 0, 0);
+    }
     socket.on('clearBack', clearCanvas);
   }
 
@@ -100,59 +129,54 @@ export default class Canvas extends Component {
     return (
       <div className='canvas-page'>
         <div>
-            <canvas id="canvas" style={{ backgroundColor: 'gray' }} />
-            <div className='button-div'>
+          <canvas id="canvas" />
+          <div>
             <button
               id="black"
+              className="button-div"
               onClick={() => {
                 this.changeColor('black');
               }}
-            >
-              black
-            </button>
+            >black</button>
             <button
               id="blue"
+              className="button-div"
               onClick={() => {
                 this.changeColor('blue');
               }}
-            >
-              blue
-            </button>
+            >blue</button>
             <button
               id="red"
+              className="button-div"
               onClick={() => {
                 this.changeColor('red');
               }}
-            >
-              red
-            </button>
+            >red</button>
             <button
               id="white"
+              className="button-div"
               onClick={() => {
                 this.changeColor('grey');
               }}
-            >
-              eraser
-            </button>
+            >eraser</button>
             <button
+              className="button-div"
               onClick={() => {
                 this.changeThickness('+');
               }}
-            >
-              +
-            </button>
+            >+</button>
             <button
+              className="button-div"
               onClick={() => {
                 this.changeThickness('-');
               }}
-            >
-              -
-            </button>
-            <button id="clear">clear</button>
-            </div>
+            >-</button>
+            <button id="clear" className="button-div">clear</button>
+            <button id="undo" className="button-div">undo</button>
           </div>
+        </div>
         <div >
-          <Chat className='chat-box'/>
+          <Chat className='chat-box' />
         </div>
       </div>
     );
