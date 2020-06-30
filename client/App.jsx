@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withCookies } from 'react-cookie';
 
 import NavBar from './component/navigationBar/navBar.js';
 import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
@@ -14,6 +15,27 @@ class App extends Component {
     }
     this.onLogged = this.onLogged.bind(this);
     this.onSignUp = this.onSignUp.bind(this);
+    this.signOut = this.signOut.bind(this);
+  }
+
+  componentDidMount() {
+    console.log(this.props.cookies.cookies.signedin)
+    if (this.props.cookies.cookies.signedin) {
+      return this.setState({
+        logStatus: true
+      })
+    }
+  }
+
+  signOut(e) {
+    console.log('signOut invoked');
+    const { cookies } = this.props;
+    cookies.remove('signedin');
+
+    this.setState({
+      ...this.state,
+      logStatus: false
+    })
   }
 
   onLogged(username, password) {
@@ -54,8 +76,6 @@ class App extends Component {
       .catch(err => console.log('err onLogged:', err))
   }
 
-
-
   render() {
     let renderCanvas;
     if (this.state.logStatus) {
@@ -81,7 +101,7 @@ class App extends Component {
     return (
       <Router>
         <div>
-          <NavBar />
+          <NavBar loggedIn={this.state.logStatus} signOut={this.signOut} />
           <Switch>
             {/* <Route path="/login"  component={Login} /> */}
             {renderLogin}
@@ -97,4 +117,4 @@ class App extends Component {
 }
 
 
-export default App;
+export default withCookies(App);
